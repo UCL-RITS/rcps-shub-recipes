@@ -1,2 +1,2 @@
 # rcps-shub-recipes
-Recipes for Singularity container images.
+Recipes for Singularity container images that don't belong anywhere else.
