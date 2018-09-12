@@ -19,4 +19,14 @@ EOF
         apt-get -y install xpra xterm less python-numpy python3-numpy
         printf "#!/bin/sh\nxpra start --systemd-run=no --user=$USER --start-via-proxy=no --start-on-connect=xterm --notifications=no \"$@\"\n"  >> /usr/bin/custom-xpra-server-start
         printf "#!/bin/sh\nxpra attach --opengl=no --no-printing --notifications=no --webcam=no\n \"$@\"" >> /usr/bin/custom-xpra-attach
+        chmod +x /usr/bin/custom-xpra-server-start /usr/bin/custom-xpra-attach
+
+%help
+This is a Singularity container intended to run Xpra on UCL central HPC clusters.
+
+It is Ubuntu-based, and contains an installation of Xpra and two scripts to abbreviate some awkward commands:
+
+    custom-xpra-server-start
+    custom-xpra-attach
+
 
