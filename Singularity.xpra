@@ -16,7 +16,8 @@ deb http://security.ubuntu.com/ubuntu bionic-security universe
 deb http://security.ubuntu.com/ubuntu bionic-security multiverse
 EOF
         apt-get -y update
-        apt-get -y install xpra xterm less python-numpy python3-numpy
+        apt-get -y install xpra xterm less python-numpy python3-numpy 
+        apt-get -y install tcl tcl-doc
         printf "#!/bin/sh\nxpra start --systemd-run=no --user=\$USER --start-via-proxy=no --start-on-connect=xterm --notifications=no \"\$@\"\n"  >> /usr/bin/custom-xpra-server-start
         printf "#!/bin/sh\nxpra attach --opengl=no --no-printing --notifications=no --webcam=no\n \"\$@\"" >> /usr/bin/custom-xpra-attach
         chmod +x /usr/bin/custom-xpra-server-start /usr/bin/custom-xpra-attach
