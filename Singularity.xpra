@@ -3,6 +3,8 @@ OSVersion: bionic
 MirrorURL: http://us.archive.ubuntu.com/ubuntu/
 
 %environment
+# Sets up environment for module use
+#  --> requires /shared to be bound
 MODULE_VERSION=3.2.6
 MODULEPATH=/shared/ucl/apps/modulefiles/core:/shared/ucl/apps/modulefiles/applications:/shared/ucl/apps/modulefiles/libraries:/shared/ucl/apps/modulefiles/compilers:/shared/ucl/apps/modulefiles/development:/shared/ucl/apps/modulefiles/bundles
 MODULE_VERSION_STACK=3.2.6
