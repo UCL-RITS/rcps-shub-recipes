@@ -29,6 +29,7 @@ deb http://security.ubuntu.com/ubuntu bionic-security universe
 deb http://security.ubuntu.com/ubuntu bionic-security multiverse
 EOF
         apt-get -y update
+	# Numpy is apparently required for certain parts of Xpra to work properly
         apt-get -y install xpra xterm less python-numpy python3-numpy 
         printf "#!/bin/sh\nxpra start --systemd-run=no --user=\$USER --start-via-proxy=no --start-on-connect=xterm --notifications=no \"\$@\"\n"  >> /usr/bin/custom-xpra-server-start
         printf "#!/bin/sh\nxpra attach --opengl=no --no-printing --notifications=no --webcam=no\n \"\$@\"" >> /usr/bin/custom-xpra-attach
