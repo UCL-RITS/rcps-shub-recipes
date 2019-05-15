@@ -1,0 +1,83 @@
+Bootstrap: debootstrap
+OSVersion: bionic
+MirrorURL: http://us.archive.ubuntu.com/ubuntu/
+
+%environment
+# Sets up environment for module use
+#  --> requires /shared to be bound
+MODULE_VERSION=3.2.6
+MODULEPATH=/shared/ucl/apps/modulefiles/core:/shared/ucl/apps/modulefiles/applications:/shared/ucl/apps/modulefiles/libraries:/shared/ucl/apps/modulefiles/compilers:/shared/ucl/apps/modulefiles/development:/shared/ucl/apps/modulefiles/bundles
+MODULE_VERSION_STACK=3.2.6
+MODULESHOME=/shared/ucl/apps/modules/3.2.6/Modules/3.2.6
+export MODULE_VERSION MODULEPATH MODULE_VERSION_STACK MODULESHOME
+module () 
+{ 
+    eval `/shared/ucl/apps/modules/3.2.6/Modules/$MODULE_VERSION/bin/modulecmd bash $*`
+}
+
+%post
+  cat >>/etc/apt/sources.list <<EOF
+deb http://us.archive.ubuntu.com/ubuntu/ bionic main restricted
+deb http://us.archive.ubuntu.com/ubuntu/ bionic-updates main restricted
+deb http://us.archive.ubuntu.com/ubuntu/ bionic universe
+deb http://us.archive.ubuntu.com/ubuntu/ bionic-updates universe
+deb http://us.archive.ubuntu.com/ubuntu/ bionic multiverse
+deb http://us.archive.ubuntu.com/ubuntu/ bionic-updates multiverse
+deb http://us.archive.ubuntu.com/ubuntu/ bionic-backports main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu bionic-security main restricted
+deb http://security.ubuntu.com/ubuntu bionic-security universe
+deb http://security.ubuntu.com/ubuntu bionic-security multiverse
+EOF
+        apt-get -y update
+        apt install -y make
+        apt install -y cmake
+        apt install -y clang
+        apt install -y libclang-6.0-dev
+        apt install -y opencl-headers
+        apt install -y llvm
+        apt install -y llvm-6.0-dev
+        apt install -y libltdl-dev
+        apt install -y libhwloc-dev
+        apt install -y pkg-config
+        apt install -y libboost-system1.62
+        apt install -y libboost-system1.62-dev
+
+        cd /usr/local
+        wget https://github.com/pocl/pocl/archive/v1.2.tar.gz
+        tar -xf v1.2.tar.gz
+        cd /usr/local/pocl-1.2/
+        mkdir build
+        cd build/
+        cmake ..
+        make && sudo make install
+
+        cd /usr/local
+        wget https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz
+        tar -xf boost_1_64_0.tar.bz2
+        cd boost_1_64_0/
+        ./bootstrap.sh
+        ./b2
+
+        cd /usr/local
+        wget https://github.com/ddemidov/vexcl/archive/1.4.1.tar.gz
+        cd /usr/local
+        tar -xf 1.4.1.tar.gz
+        cd vexcl-1.4.1
+        cmake .
+        cp -r vexcl/ ../include/
+        cp -r CL/ ../include/
+
+        sed -i -e 's%boost/serialization/array.hpp%boost/serialization/array_wrapper.hpp%' /usr/local/boost_1_64_0/boost/numeric/ublas/storage.hpp /usr/local/boost_1_64_0/boost/numeric/ublas/matrix.hpp
+
+        cd /usr/local
+        wget https://bitbucket.org/tassev/qsl_squasher/get/ver_2.0%20QSL%20Squasher%20--%20Transverse%20Version.tar.gz
+        tar -xf tassev-*
+        rm -f tassev-*.tar.gz
+        cd tassev-*
+        bash ./compile.sh
+
+
+
+%help
+This is a Singularity container intended to run QSL Squasher on UCL central HPC clusters.
+
