@@ -57,7 +57,7 @@ EOF
         echo "========================================================="
 
         cd /usr/local
-        wget -nv https://downloads.sourceforge.net/project/boost/boost/1.62.0/boost_1_62_0.tar.bz2
+        wget -nv https://downloads.sourceforge.net/project/boost/boost/1.64.0/boost_1_64_0.tar.bz2
         tar -xf boost_1_64_0.tar.gz
         cd boost_1_64_0/
         ./bootstrap.sh
