@@ -52,12 +52,13 @@ EOF
         cmake ..
         make && make install
 
-        cd /usr/local
-        wget -nv https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz
-        tar -xf boost_1_64_0.tar.gz
-        cd boost_1_64_0/
-        ./bootstrap.sh
-        ./b2
+#        cd /usr/local
+#        wget -nv https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz
+#        tar -xf boost_1_64_0.tar.gz
+#        cd boost_1_64_0/
+#        ./bootstrap.sh
+#        ./b2
+#        sed -i -e 's%boost/serialization/array.hpp%boost/serialization/array_wrapper.hpp%' /usr/local/boost_1_64_0/boost/numeric/ublas/storage.hpp /usr/local/boost_1_64_0/boost/numeric/ublas/matrix.hpp
 
         cd /usr/local
         wget -nv https://github.com/ddemidov/vexcl/archive/1.4.1.tar.gz
@@ -68,7 +69,6 @@ EOF
         cp -r vexcl/ ../include/
         cp -r CL/ ../include/
 
-        sed -i -e 's%boost/serialization/array.hpp%boost/serialization/array_wrapper.hpp%' /usr/local/boost_1_64_0/boost/numeric/ublas/storage.hpp /usr/local/boost_1_64_0/boost/numeric/ublas/matrix.hpp
 
         cd /usr/local
         wget -nv https://bitbucket.org/tassev/qsl_squasher/get/ver_2.0%20QSL%20Squasher%20--%20Transverse%20Version.tar.gz
