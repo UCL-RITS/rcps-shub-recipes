@@ -1,0 +1,48 @@
+Bootstrap: debootstrap
+OSVersion: bionic
+MirrorURL: http://us.archive.ubuntu.com/ubuntu/
+
+%environment
+# Sets up environment for module use
+#  --> requires /shared to be bound
+MODULE_VERSION=3.2.6
+MODULEPATH=/shared/ucl/apps/modulefiles/core:/shared/ucl/apps/modulefiles/applications:/shared/ucl/apps/modulefiles/libraries:/shared/ucl/apps/modulefiles/compilers:/shared/ucl/apps/modulefiles/development:/shared/ucl/apps/modulefiles/bundles
+MODULE_VERSION_STACK=3.2.6
+MODULESHOME=/shared/ucl/apps/modules/3.2.6/Modules/3.2.6
+export MODULE_VERSION MODULEPATH MODULE_VERSION_STACK MODULESHOME
+module () 
+{ 
+    eval `/shared/ucl/apps/modules/3.2.6/Modules/$MODULE_VERSION/bin/modulecmd bash $*`
+}
+
+%post
+  cat >>/etc/apt/sources.list <<EOF
+deb http://us.archive.ubuntu.com/ubuntu/ bionic main restricted
+deb http://us.archive.ubuntu.com/ubuntu/ bionic-updates main restricted
+deb http://us.archive.ubuntu.com/ubuntu/ bionic universe
+deb http://us.archive.ubuntu.com/ubuntu/ bionic-updates universe
+deb http://us.archive.ubuntu.com/ubuntu/ bionic multiverse
+deb http://us.archive.ubuntu.com/ubuntu/ bionic-updates multiverse
+deb http://us.archive.ubuntu.com/ubuntu/ bionic-backports main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu bionic-security main restricted
+deb http://security.ubuntu.com/ubuntu bionic-security universe
+deb http://security.ubuntu.com/ubuntu bionic-security multiverse
+EOF
+      apt-get -y update
+      apt-get -y curl gnupg apt-transport-https unzip readline-common mono software-properties-common wavpack libsox-fmt-all sox shntool libav-tools ffmpeg 
+
+      # I have no idea why they do this, it seems lazy and bad but w/e it's a container
+      # link ffmpeg to /usr/bin/local
+      ln -s /usr/bin/ffmpeg /usr/local/bin/ffmpeg
+      ln -s /usr/bin/ffprobe /usr/local/bin/ffprobe
+      mkdir -p /usr/local/qut_ecoacoustics
+      cd /usr/local/qut_ecoacoustics
+      curl -O https://github.com/QutEcoacoustics/audio-analysis/releases/download/v19.7.0.1/Release.19.7.0.1.zip
+      unzip Release.19.7.0.1.zip
+
+
+
+%help
+This is a Singularity container intended to run QUT Ecoacoustics tools on UCL central HPC clusters.
+
+
