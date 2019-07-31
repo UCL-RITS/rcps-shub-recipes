@@ -29,7 +29,20 @@ deb http://security.ubuntu.com/ubuntu bionic-security universe
 deb http://security.ubuntu.com/ubuntu bionic-security multiverse
 EOF
       apt-get -y update
-      apt-get -y curl gnupg apt-transport-https unzip readline-common mono software-properties-common wavpack libsox-fmt-all sox shntool libav-tools ffmpeg 
+      apt-get -y install \
+          curl \
+          gnupg \
+          apt-transport-https \
+          unzip \
+          readline-common \
+          mono-runtime \
+          mono-complete \
+          software-properties-common \
+          wavpack \
+          libsox-fmt-all \
+          sox \
+          shntool \
+          ffmpeg
 
       # I have no idea why they do this, it seems lazy and bad but w/e it's a container
       # link ffmpeg to /usr/bin/local
@@ -37,8 +50,10 @@ EOF
       ln -s /usr/bin/ffprobe /usr/local/bin/ffprobe
       mkdir -p /usr/local/qut_ecoacoustics
       cd /usr/local/qut_ecoacoustics
-      curl -O https://github.com/QutEcoacoustics/audio-analysis/releases/download/v19.7.0.1/Release.19.7.0.1.zip
-      unzip Release.19.7.0.1.zip
+      curl -L -O https://github.com/QutEcoacoustics/audio-analysis/releases/download/v19.7.2.3/Release.19.7.2.3.zip
+      unzip Release.19.7.2.3.zip
+      printf '#!/bin/bash\nmono /usr/local/qut_ecoacoustics/AnalysisPrograms.exe "$@"\n' | cat >/usr/bin/AP
+      chmod +x /usr/bin/AP
 
 
 
