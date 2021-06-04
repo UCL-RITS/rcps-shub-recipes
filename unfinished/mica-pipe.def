@@ -1,0 +1,219 @@
+Bootstrap: docker
+FROM: ubuntu:20.04
+
+%environment
+    export XDG_RUNTIME_DIR=
+    export FREESURFER_HOME=/usr/local/freesurfer
+    # Users still have to source $FREESURFER_HOME/SetUpFreeSurfer.sh
+    #  unless I either pull it apart or put it in profile.d or something
+
+%files
+    # Built below, for re-use
+    ./blob-store/ants-build-staged-2.3.5.tar.gz /ants-build-staged-2.3.5.tar.gz
+
+%post
+    apt-get update -yq
+
+    # If you don't run this this way a tzdata post-install-trigger
+    #  tries to get you to set a timezone on the command line. >:(
+    DEBIAN_FRONTEND=noninteractive apt-get install -yq tzdata
+    # cf. https://github.com/tianon/docker-brew-ubuntu-core/issues/181
+
+    # Base stuff and the tools that needs
+    apt-get install -yq \
+        build-essential \
+        git \
+        cmake \
+        r-base \
+        r-cran-devtools \
+        python3.7 \
+        python3-pip
+    
+    # Required for R packages for curl and openssl which are required for httr which is required for plotly
+    apt-get install -yq \
+        libcurl4-openssl-dev \
+        libssl-dev
+   
+    # dcm2niix + pigz optional dependency
+    apt-get install -yq \
+        dcm2niix \
+        pigz
+
+    # Not 100% sure this will be new enough or include all the right bits
+    apt-get install -yq \
+        mrtrix3 \
+        mrtrix3-doc
+
+    # Ditto, might have to get neurodebian version
+    apt-get install -yq \
+        connectome-workbench
+    
+    # Matlab Runtime Lib
+    wget https://ssd.mathworks.com/supportfiles/downloads/R2021a/Release/2/deployment_files/installer/complete/glnxa64/MATLAB_Runtime_R2021a_Update_2_glnxa64.zip
+    mkdir matlab-install
+    cd matlab-install
+    unzip ../MATLAB_Runtime_R2021a_Update_2_glnxa64.zip
+    ./install -silent -agreeToLicense yes
+    cd /
+    # Not sure we need these but might as well, in case it helps
+    apt-get -yq install \
+        matlab-support \
+        matlab-support-dev \
+        mwrap
+
+    # ANTs takes quite a lot of CPU time and memory to build,
+    #  so this commented out step builds it and stashes the result
+    #  so that for future builds or retries, we can just download
+    #  it in and finish the "make install" step.
+    ## ANTs
+    #mkdir /ants-build-staged
+    #cd /ants-build-staged
+    #workingDir=${PWD}
+    #git clone -b v2.3.5 --single-branch https://github.com/ANTsX/ANTs.git
+    #mkdir build install
+    #cd build
+    #cmake \
+    #     -DCMAKE_INSTALL_PREFIX=${workingDir}/install \
+    #     ../ANTs 2>&1 | tee cmake.log
+    #make 2>&1 | tee build.log
+    #cd ANTS-build
+    #make install 2>&1 
+    #cd /
+    #tar -czf /ants-build-staged-2.3.5.tar.gz ants-build-staged
+    ##rm -rf /ants-build-staged
+
+    # ANTs if you already have the tarball
+    #  from the %files step
+    tar -xf /ants-build-staged-2.3.5.tar.gz
+    cd /ants-build-staged/ANTS-build
+    make install 2>&1
+    cd / 
+    rm ants-build-staged-2.3.5.tar.gz
+
+    
+    # FreeSurfer & deps
+    # TODO: This doesn't work yet
+    #  Reference: https://surfer.nmr.mgh.harvard.edu/fswiki/rel6downloads
+    #  As with FSL, Ubuntu but Centos 6 binary, I guess. libc compat, I assume.
+    wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.0/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz
+    tar -C /usr/local -xzvf freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz
+    rm freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz
+
+    # This is... not a reassuring list of required packages for FreeSurfer
+    # But it's what the website says
+    apt-get -yq install bc binutils libgomp1 perl psmisc sudo tar tcsh unzip uuid-dev vim-common libjpeg62-dev
+
+
+    # FSL
+    # TODO: This doesn't work yet
+    apt-get install -yq libglapi-mesa libglu1-mesa-dev
+    # Required by FSLView
+    # libpng12 is a venerable antique and focal doesn't include it. Not sure what to do about that.
+    apt-get install -yq libmng2 libpng12
+    wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
+    apt-get install -yq python2 # we need this only to run the installer >:(
+    # Not sure whether /usr/local is okay here. Might need to go in /usr/local/fsl
+    # I'm trying to avoid unnecessary environment variable manipulation
+    python2 -d /usr/local fslinstaller.py
+    apt-get remove -yq python2
+
+    # Just leaving this here for the moment, we're not using it
+    # Confusingly even though we're using Ubuntu, the correct tarball to use is labelled Centos
+    #  as per the manifest in https://fsl.fmrib.ox.ac.uk/fsldownloads/manifest.json
+    #wget -q https://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-6.0.4-centos7_64.tar.gz
+
+    # FIX (not a fix, an FSL add-on called FIX)
+    wget http://www.fmrib.ox.ac.uk/~steve/ftp/fix.tar.gz
+    # TODO: Not finished yet
+
+    # Python packages straight from the deps list
+    pip install \
+     brainspace \
+     certifi \
+     cycler \
+     joblib \
+     kiwisolver \
+     matplotlib \
+     nibabel \
+     numpy \
+     packaging \
+     pandas \
+     Pillow \
+     pyparsing \
+     python-dateutil \
+     pytz \
+     scikit-learn \
+     scipy \
+     six \
+     threadpoolctl \
+     vtk \
+     https://github.com/MICA-MNI/ENIGMA/archive/refs/tags/1.1.1.tar.gz
+
+    # R packages straight from the deps list (less the core packages they left in the list)
+    Rscript -e "
+install.packages(quiet = TRUE,
+c('plotly',
+'viridis',
+'viridisLite',
+'tidyr',
+'ggplot2',
+'scales',
+'randomForest',
+'e1071',
+'party',
+'strucchange',
+'sandwich',
+'zoo',
+'modeltools',
+'mvtnorm',
+'class',
+'ROCR',
+'kernlab',
+'tidyselect',
+'coin',
+'purrr',
+'lattice',
+'colorspace',
+'vctrs',
+'generics',
+'htmltools',
+'survival',
+'rlang',
+'pillar',
+'glue',
+'withr',
+'matrixStats',
+'multcomp',
+'lifecycle',
+'munsell',
+'gtable',
+'htmlwidgets',
+'codetools',
+'TH.data',
+'Rcpp',
+'jsonlite',
+'gridExtra',
+'digest',
+'dplyr',
+'magrittr',
+'lazyeval',
+'tibble',
+'crayon',
+'pkgconfig',
+'MASS',
+'ellipsis',
+'libcoin',
+'Matrix',
+'data.table',
+'httr',
+'R6'))
+"
+
+
+%runscript
+    "$@"
+
+%labels
+    AUTHOR i.kirker@ucl.ac.uk
+    VERSION v0.0.0
+    
