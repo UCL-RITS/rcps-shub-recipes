@@ -7,9 +7,17 @@ FROM: ubuntu:20.04
     # Users still have to source $FREESURFER_HOME/SetUpFreeSurfer.sh
     #  unless I either pull it apart or put it in profile.d or something
 
+    # Blanking this when the container is used disables FSL's attempts to 
+    #  submit jobs automatically which would have to be manually configured
+    #  and would involve pulling SGE into the container too
+    export SGE_ROOT=
+
 %files
     # Built below, for re-use
     ./blob-store/ants-build-staged-2.3.5.tar.gz /ants-build-staged-2.3.5.tar.gz
+
+    # This takes a while to download, so stash it
+    ./blob-store/MATLAB_Runtime_R2021a_Update_2_glnxa64.zip /MATLAB_Runtime_R2021a_Update_2_glnxa64.zip
 
 %post
     apt-get update -yq
@@ -27,39 +35,45 @@ FROM: ubuntu:20.04
         r-base \
         r-cran-devtools \
         python3.7 \
-        python3-pip
+        python3-pip \
+        wget
     
     # Required for R packages for curl and openssl which are required for httr which is required for plotly
     apt-get install -yq \
         libcurl4-openssl-dev \
         libssl-dev
    
-    # dcm2niix + pigz optional dependency
+    # dcm2niix (direct part of the pipeline) & pigz optional dependency
     apt-get install -yq \
         dcm2niix \
         pigz
 
+    # mrtrix also directly part of the pipeline
     # Not 100% sure this will be new enough or include all the right bits
     apt-get install -yq \
         mrtrix3 \
         mrtrix3-doc
 
-    # Ditto, might have to get neurodebian version
+    # Stated pipeline dependency 
+    # Ditto on newness, might have to get neurodebian version if it's newer
     apt-get install -yq \
         connectome-workbench
     
     # Matlab Runtime Lib
-    wget https://ssd.mathworks.com/supportfiles/downloads/R2021a/Release/2/deployment_files/installer/complete/glnxa64/MATLAB_Runtime_R2021a_Update_2_glnxa64.zip
+    #wget https://ssd.mathworks.com/supportfiles/downloads/R2021a/Release/2/deployment_files/installer/complete/glnxa64/MATLAB_Runtime_R2021a_Update_2_glnxa64.zip
+    # ^-- this is large and slow to download, copying in from a file instead in the %files section
     mkdir matlab-install
     cd matlab-install
     unzip ../MATLAB_Runtime_R2021a_Update_2_glnxa64.zip
-    ./install -silent -agreeToLicense yes
+    ./install -mode silent -agreeToLicense yes
     cd /
-    # Not sure we need these but might as well, in case it helps
-    apt-get -yq install \
-        matlab-support \
-        matlab-support-dev \
-        mwrap
+    # It's possible we'll need these as well, but matlab-support has problems installing non-interactively
+    #  and the usual DEBIAN_FRONTEND thing seems to just make it fail with an error code 100
+    # They're support packages for integrating other packages from apt with matlab
+    # apt-get -yq install \
+    #    matlab-support \
+    #    matlab-support-dev \
+    #    mwrap
 
     # ANTs takes quite a lot of CPU time and memory to build,
     #  so this commented out step builds it and stashes the result
@@ -90,9 +104,10 @@ FROM: ubuntu:20.04
     cd / 
     rm ants-build-staged-2.3.5.tar.gz
 
+    # By the time you get here, the container is already in the neighbourhood of 8-10GB I think
     
     # FreeSurfer & deps
-    # TODO: This doesn't work yet
+    # TODO: I don't know whether this works yet
     #  Reference: https://surfer.nmr.mgh.harvard.edu/fswiki/rel6downloads
     #  As with FSL, Ubuntu but Centos 6 binary, I guess. libc compat, I assume.
     wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.0/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0.tar.gz
@@ -106,25 +121,32 @@ FROM: ubuntu:20.04
 
     # FSL
     # TODO: This doesn't work yet
+    # OpenGL dependencies for the visualisation tools
     apt-get install -yq libglapi-mesa libglu1-mesa-dev
     # Required by FSLView
     # libpng12 is a venerable antique and focal doesn't include it. Not sure what to do about that.
+    # In theory FSLeyes is intended to replace FSLView but I don't know if it actually *does*.
     apt-get install -yq libmng2 libpng12
     wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
-    apt-get install -yq python2 # we need this only to run the installer >:(
+    # We have to install Python 2 solely to run the FSL installer >:(
+    apt-get install -yq python2
     # Not sure whether /usr/local is okay here. Might need to go in /usr/local/fsl
-    # I'm trying to avoid unnecessary environment variable manipulation
+    # Hopefully putting it in /usr/local will avoid unnecessary environment variable requirements
+    # As far as I can tell, the installer downloads Conda, sets up a conda-env and then downloads
+    #  a ton of dependencies into it along with FSL itself?
     python2 -d /usr/local fslinstaller.py
+    # Remove the ancient Python since hopefully we don't need it anymore
     apt-get remove -yq python2
 
-    # Just leaving this here for the moment, we're not using it
+    # Just leaving this URL here for the moment, we're not using it right now but it might be necessary
     # Confusingly even though we're using Ubuntu, the correct tarball to use is labelled Centos
     #  as per the manifest in https://fsl.fmrib.ox.ac.uk/fsldownloads/manifest.json
-    #wget -q https://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-6.0.4-centos7_64.tar.gz
+    # wget -q https://fsl.fmrib.ox.ac.uk/fsldownloads/fsl-6.0.4-centos7_64.tar.gz
 
     # FIX (not a fix, an FSL add-on called FIX)
     wget http://www.fmrib.ox.ac.uk/~steve/ftp/fix.tar.gz
     # TODO: Not finished yet
+
 
     # Python packages straight from the deps list
     pip install \
